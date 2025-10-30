@@ -111,36 +111,32 @@ Our purpose is to investigate whether Coors Field in Denver, Colorado is truly t
 - Why might high altitude affect baseball performance?  Is Coors Field affected by high altitude?
 
 **Answer:**
-
-High altitude significantly affects baseball performance due to the reduced air density at higher elevations. Coors Field, located in Denver, Colorado at 5,280 feet above sea level, is the highest ballpark in Major League Baseball and experiences pronounced effects from this altitude.
+**Why high altitude affects baseball performance**
+High altitude changes the physics of how the ball moves through the air and also affects players. The main mechanisms are:
 
 **Primary Mechanisms of High Altitude Effects:**
 
-1. **Reduced Air Density Impact on Batted Balls:**
-   - At 5,280 feet, the thinner air offers less resistance to batted balls
-   - Baseballs can travel approximately 9% farther than at sea level
-   - A 400-foot home run at sea level could extend to about 440 feet at Coors Field
-   - This creates more home runs and extra-base hits
+1. **Reduced air density → less aerodynamic drag**
+Batted balls lose less speed, so fly farther on average. This increases the probability a long fly becomes an extra-base hit or a home run.
+2. **Reduced Magnus effect → less pitch movement**
+Breaking pitches (curveballs, sliders) rely on airflow to generate movement. Thinner air reduces that movement, making breaking pitches flatter and easier to hit.
+3. **Temperature and humidity interactions**
+Higher temperature and lower humidity (often correlated with altitude and local climate) can further reduce drag and make the ball “livelier.”
+4. **Human/strategic effects**
+Player endurance and recovery can be impacted at altitude; teams sometimes change roster/strategy (pitching usage, ball handling) to adapt.
+Because these physical effects directly change batted-ball distance and pitch movement, stadiums at high elevation tend to show higher run-scoring and home-run rates compared with sea-level parks (all else equal).
 
-2. **Diminished Pitch Movement:**
-   - Breaking pitches (curveballs, sliders) experience less movement due to reduced air resistance
-   - Fastballs exhibit less "rise" due to decreased Magnus effect in thinner air
-   - Pitchers lose some of their ability to fool hitters with movement
+**Is Coors Field affected by high altitude?**
+Yes. Coors Field in Denver sits at about 5,280 feet above sea level — the highest elevation of any Major League ballpark. That elevation is large enough to produce noticeable effects:
 
-3. **Humidor Mitigation:**
-   - Coors Field implemented a humidor in 2002 to store baseballs at controlled humidity
-   - This reduces ball liveliness and helps balance the game dynamics
-   - The humidor partially counteracts the altitude effects
+- Historically, Coors Field has had higher rates of runs and home runs per game than most other MLB parks, consistent with reduced drag and reduced pitch movement.
+- The Rockies introduced a humidor for baseballs (implemented in 2002) to store balls at controlled humidity. The humidor reduces ball liveliness and mitigates, but does not completely eliminate, the altitude effect.
+- Other non-altitude factors (park dimensions, wind, team composition, rule changes, league-wide offense trends) also influence run rates, so altitude is an important but not sole contributor.
 
-**Hypothesis Formation:**
-
-Given these physical effects, we can form several testable hypotheses about Coors Field:
-
-1. **Primary Hypothesis:** Coors Field will have higher average runs per game compared to sea-level stadiums due to increased offensive production
-2. **Secondary Hypothesis:** Coors Field will have higher home run rates per game compared to other stadiums
-3. **Tertiary Hypothesis:** The gap between Coors Field and other stadiums may have decreased after the humidor implementation in 2002
-
-Our data analysis will test whether Coors Field (COL) truly lives up to its reputation as the most run-friendly ballpark in Major League Baseball.
+**How to test this with your dataset (quick suggestions)**
+- Compare Coors Field ("COL") vs league: compute average runs/game and HR/game and show percent above league average.
+- Visual checks: horizontal bar charts (or two-facet 2010 vs 2021) that highlight "COL".
+- Statistical checks: simple t-test or bootstrap confidence intervals for runs/HR per game between COL and other parks; compare pre-/post-humidor if you have earlier seasons.
 :::
 
 ## Stage 2: Curation of Content
@@ -187,36 +183,43 @@ print(avgDF_2021.head())
 - How many games are in the dataset? Why do we aggregate individual games into stadium averages before we start the visualization process?
 
 **Answer:**
+There are 2,430 games in the 2010 file and 2,429 games in the 2021 file (4,859 games total). We aggregate individual games into stadium averages for several practical and statistical reasons:
 
-**Dataset Size:**
-- 2010 dataset: 2,430 games
-- 2021 dataset: 2,429 games  
-- Total games: 4,859 games
+- Statistical stability: single games are noisy (pitcher matchups, weather, randomness). Averaging across all home games at a stadium reduces variance and reveals the persistent stadium-level effect.
+- Signal vs noise: aggregation amplifies systematic park effects (altitude, dimensions, humidor) and de-emphasizes transient game-to-game noise.
+- Appropriate unit of inference: the business question is about the stadium ("Is Coors Field run-friendly?"), so stadium-level averages match the decision unit.
+- Readability & communication: ~30 stadium points are easier to read and compare (rankings, percent-above-league) than thousands of game-level points.
+- Visualization design: aggregates prevent overplotting and let you use accurate encodings (bar lengths, ordered lists, annotations) that support precise comparisons.
 
-**Why We Aggregate Individual Games into Stadium Averages:**
+Below is a small, ready-to-paste pandas snippet that computes per-stadium game counts and averages for runs and home runs (useful before plotting):
 
-1. **Statistical Stability:** Individual games have high variability due to factors like:
-   - Pitcher matchups (ace vs. struggling pitcher)
-   - Weather conditions (wind, temperature, humidity)
-   - Team performance on specific days
-   - Random chance and luck
+```{python}
+# Compute per-stadium averages and game counts
+agg_2010 = (df2010
+    .assign(totalRuns = df2010.homeScore + df2010.visScore,
+            totalHR = df2010.homeHR + df2010.visHR)
+    .groupby('home', as_index=False)
+    .agg(games_played=('date','count'),
+         avg_runs=('totalRuns','mean'),
+         avg_hr=('totalHR','mean'))
+    .sort_values('avg_runs', ascending=False)
+)
 
-2. **Pattern Recognition:** Aggregation reveals the underlying stadium effects by:
-   - Smoothing out day-to-day fluctuations
-   - Highlighting consistent patterns across multiple games
-   - Making stadium comparisons meaningful and reliable
+agg_2021 = (df2021
+    .assign(totalRuns = df2021.homeScore + df2021.visScore,
+            totalHR = df2021.homeHR + df2021.visHR)
+    .groupby('home', as_index=False)
+    .agg(games_played=('date','count'),
+         avg_runs=('totalRuns','mean'),
+         avg_hr=('totalHR','mean'))
+    .sort_values('avg_runs', ascending=False)
+)
 
-3. **Visualization Clarity:** Working with stadium averages instead of 4,859 individual games allows us to:
-   - Create clean, readable visualizations with ~30 data points (one per stadium)
-   - Focus on the core question: which stadiums are most run-friendly?
-   - Avoid overwhelming charts with thousands of data points
+print('2010 games:', df2010.shape[0], '→ stadiums:', len(agg_2010))
+print('2021 games:', df2021.shape[0], '→ stadiums:', len(agg_2021))
+print('\nTop stadiums 2010 by avg runs:\n', agg_2010.head())
+```
 
-4. **Business Value:** Stadium averages provide actionable insights for:
-   - Team management decisions about ballpark factors
-   - Fan expectations about scoring in different venues
-   - Betting and fantasy sports considerations
-
-**Example:** Instead of showing 81 individual Colorado Rockies home games with scores ranging from 2-15 runs, we show one average (e.g., 10.2 runs/game) that represents the stadium's true run-friendliness.
 :::
 
 ## Stage 3: Structuring of Visual Mappings
@@ -277,53 +280,30 @@ plt.show()
 - When would you choose a vertical bar chart over horizontal?
 
 **Answer:**
+**Horizontal vs. scatter / vertical (concise answer):**
 
-**Why Horizontal Bar Chart is Better Than Scatter Plot:**
+- Horizontal bar charts are better here because stadiums are categorical and bar length encodes the numeric value (average runs) using position/length — a highly accurate perceptual channel. Scatter plots imply two continuous variables and are less clear when the x-axis is just category labels; they also make reading and comparing many category labels awkward.
+- Use a vertical bar chart when you have few categories, short labels, or when the x-axis encodes an ordered or temporal variable (time series). Horizontal bars are preferable for many categories, long labels, or ranking tasks because labels are easier to read and comparisons remain precise.
 
-1. **Categorical vs. Continuous Data:**
-   - Stadium names are **categorical labels**, not continuous numerical values
-   - Scatter plots are designed for continuous data with meaningful x-y relationships
-   - Bar charts are specifically designed for categorical comparisons
-
-2. **Clear Value Encoding:**
-   - Bar charts use **length** to encode values, which is one of the most accurate perceptual encodings
-   - Scatter plots use **position** on two continuous axes, which is less precise for categorical data
-   - Length is easier to compare than position for discrete categories
-
-3. **Readability and Comparison:**
-   - Bar charts make it easy to compare stadium performance at a glance
-   - Scatter plots force the eye to estimate distances between points
-   - Bar charts provide clear visual ranking of stadiums from highest to lowest runs
-
-4. **Label Management:**
-   - Stadium names (like "COL", "BOS", "NYY") are short but still crowded on x-axis of scatter plots
-   - Horizontal bars allow stadium labels to be read vertically without rotation
-   - Vertical bars would require rotated labels or overlapping text
-
-5. **Business Communication:**
-   - Bar charts immediately communicate "this stadium is better/worse than that stadium"
-   - Scatter plots suggest relationships and correlations that don't exist with categorical data
-   - Stakeholders can quickly identify the top and bottom performers
-
-**When to Choose Vertical vs. Horizontal Bar Charts:**
-
-- **Horizontal Bar Charts** (preferred here):
-  - When you have many categories (30+ stadiums)
-  - When category names are long or need to be readable
-  - When you want to show ranking/ordering clearly
-  - When screen space is wide rather than tall
-
-- **Vertical Bar Charts**:
-  - When you have few categories (5-10)
-  - When category names are short
-  - When showing time series or sequential data
-  - When screen space is tall rather than wide
 
 **Question 2: Aesthetic Mappings**
 - What does the color highlighting accomplish in Approach 4?
 - How does position (x/y) compare to color for encoding data?
 
 **Answer:**
+**Color highlighting (Approach 4)**
+
+- Creates a clear visual hierarchy: the highlighted stadium (COL) immediately becomes the focal point while other stadiums recede to secondary importance.
+- Improves pattern detection: color helps viewers find the stadium of interest quickly without scanning labels or bar lengths.
+- Supports storytelling: it emphasizes the specific claim you're testing (e.g., "Is Coors Field unusually run-friendly?") and makes the intended comparison explicit.
+- Works as a visual filter: color can be used to group or flag categories (highlight, above/below average, region), aiding viewers who skim the chart.
+
+**Position vs. Color for encoding data**
+
+- Position (x/y) is the most accurate perceptual channel for quantitative values. Use position (bar length or axis position) for the primary numeric variable (average runs) when precise comparison is required.
+- Color is best used as a secondary, categorical or emphasis channel. It quickly draws attention and encodes group membership but is less precise for reading exact numeric differences.
+- Combine them: encode the numeric value with position and use color to add emphasis or category information (e.g., highlight COL in purple while encoding runs with bar length). This preserves accuracy while supporting narrative emphasis.
+- Accessibility note: when relying on color, ensure sufficient contrast and provide redundant encodings (labels, annotations, or shape) for colorblind or grayscale viewers.
 
 **What Color Highlighting Accomplishes in Approach 4:**
 
@@ -442,15 +422,16 @@ print(f"Colorado is {((colorado_runs / avgDF_2010_sorted.totalRuns.mean()) - 1) 
 - What elements make this visualization suitable for a business presentation?
 
 **Answer:**
-
-- Clean, professional color scheme with consistent branding
-- Clear titles and labels that communicate key insights
-- Strategic use of highlighting to draw attention to Colorado
-- Grid lines and proper scaling for accurate data reading
-- Legend and annotations that provide context
-- Executive summary with actionable business recommendations
-
-- Is the annotation on the visualization helpful?  Can you fix its placement?
+- Clear, audience-first headline: a bold title that states the key takeaway so executives immediately understand the message.
+- Single, prioritized focal point: Colorado (COL) is highlighted with a contrasting color so stakeholders spot the subject of interest at a glance.
+- Precise quantitative encoding: bar length (position) is used for the main metric (average runs), which supports accurate comparisons.
+- Clean, professional styling: a restrained color palette, readable fonts, consistent label formatting, and light gridlines that aid reading without clutter.
+- Contextual reference lines and annotations: league-average lines and annotated COL values provide context and the exact numbers decision-makers want.
+- Redundant encodings for accessibility: numeric labels, legend, and annotations supplement color so the insight works in grayscale and for color-vision deficiencies.
+- Balanced layout and spacing: readable figure size, tight layout, and proper margins make the chart slide-ready.
+- Executive summary and actionable insight: a short textual takeaway (one or two sentences) below or beside the chart translates data into business implications and recommendations.
+- Comparability across facets: consistent sorting and shared x-axis when comparing 2010 vs 2021 so viewers can make fair comparisons quickly.
+- Clean exportability: use of object-oriented matplotlib to control exact layout and styling ensures the same appearance when exported to slides or printed reports.
 
 **Answer:**
 
